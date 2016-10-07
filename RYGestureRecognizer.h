@@ -2,8 +2,8 @@
 //  RYUIGestureRecognizer.h
 //  XTools
 //
-//  Created by aahu on 16/9/22.
-//  Copyright © 2016年 Royole. All rights reserved.
+//  Created by Ekulelu on 16/9/22.
+//  Copyright © 2016年 Ekulelu. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
