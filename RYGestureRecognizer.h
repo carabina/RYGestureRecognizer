@@ -1,6 +1,6 @@
 //
 //  RYUIGestureRecognizer.h
-//  XTools
+//  
 //
 //  Created by Ekulelu on 16/9/22.
 //  Copyright © 2016年 Ekulelu. All rights reserved.
