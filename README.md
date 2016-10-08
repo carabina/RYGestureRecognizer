@@ -7,3 +7,34 @@ You can choose the gesture you want to recognize, just set the property of "gest
 And in the system gesture, if you register single tap and double tap in the same time, the single tap will be recognized with some delay, in RYGestureRecognizer, the delay is less than the system's. which is controll by the property of "mutilClickedSensitivity".
 
 You can also add your custom swipe gesture to RYGestureRecognizer, like gesture up-left-down-right. you just call the method - (void) addCustomGesture:(NSUInteger) customGesture with paramter of 1324.
+
+##How to use it
+```
+//initialize and set the action.
+RYGestureRecognizer* recognizer = [[RYGestureRecognizer alloc] initWithTarget:self action:@selector(gestureAction:)]; 
+recognizer.maxNumberOfTapsRequired = 2; //recognizer single and double taps.
+recognizer.gestureEnable ^= RYGestureEnableLongPress; //except the long press gesture
+[self.view addGestureRecognizer:recognizer]; //add to the view
+```
+
+##The action method
+```
+- (void) gestureAction:(RYGestureRecognizer*) recognizer {
+
+    if (recognizer.recognizerState == UIGestureRecognizerStateChanged && recognizer.maxFingerNum == 1) {  //one finger move
+        CGPoint v = [recognizer velocityInView:self.view]; //get the finger velocity
+        CGPoint z = [recognizer translationInView:self.view]; // get the translation
+        NSUInteger fingerNum = recognizer.maxFingerNum;  // get the finger number
+        //Do other things you want to do...
+    }
+    
+    
+    if (recognizer.recognizerState == UIGestureRecognizerStateEnded) {  //recognized the gesture
+        CGPoint v = [recognizer velocityInView:self.view]; //get the finger velocity
+        CGPoint z = [recognizer translationInView:self.view]; // get the translation
+        NSUInteger fingerNum = recognizer.maxFingerNum;  // get the finger number
+        RYPanGesture gesture =  recognizer.gesture // get the recognized gesture
+        //Do other things you want to do...
+    }
+}
+```
