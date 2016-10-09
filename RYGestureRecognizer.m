@@ -1,6 +1,6 @@
 //
 //  RYUIGestureRecognizer.m
-//  
+//  XTools
 //
 //  Created by Ekulelu on 16/9/22.
 //  Copyright © 2016年 Ekulelu. All rights reserved.
@@ -118,14 +118,15 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
     self.lastDirection = DIRECTION_UNKNOWN;
     self.gesture = RYGestureNone;
     
-    
     //长按手势
-    if (self.longPressTimer != nil) { //定时器不为空，且没响应过长按
-        [self.longPressTimer invalidate];
-        self.longPressTimer = nil;
-    }
-    if(!self.isLongPress) { //从这次手势开始没响应过长按
-        self.longPressTimer = [NSTimer scheduledTimerWithTimeInterval:self.minimumLongPressDuration target:self selector:@selector(longPressTimerAction:) userInfo:nil repeats:NO];
+    if (self.gestureEnable & RYGestureEnableLongPress) {
+        if (self.longPressTimer != nil) { //定时器不为空，且没响应过长按
+            [self.longPressTimer invalidate];
+            self.longPressTimer = nil;
+        }
+        if(!self.isLongPress) { //从这次手势开始没响应过长按
+            self.longPressTimer = [NSTimer scheduledTimerWithTimeInterval:self.minimumLongPressDuration target:self selector:@selector(longPressTimerAction:) userInfo:nil repeats:NO];
+        }
     }
     
     
@@ -136,13 +137,11 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
 
 //触点移动的时候会调用这个方法，传入的是移动的触点
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
-    //    NSLog(@"move");
+//        NSLog(@"move %d", touches.count);
     if (self.touchRealease || self.isLongPress) { //确保没有按下的手指离开   或者  已经响应是长按手势
         return;
     }
     
-    self.moved = true;
-    //    NSLog(@"move");
     if (self.fail) {
         return;
     }
@@ -153,19 +152,26 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
     
     
     NSUInteger newDirection = DIRECTION_UNKNOWN;
-    
+    Boolean thisTimeMove = false;
+    int moveFingerNum = 0;
     for (UITouch* touch in touches) {
         NSUInteger index = [self.touchArray indexOfObject:touch];
         CGPoint newPoint = [touch locationInView:self.view];
         CGPoint lastPoint = ((NSValue*)[self.lastPointArray objectAtIndex:index]).CGPointValue;
         CGFloat moveRangeX = newPoint.x - lastPoint.x;
         CGFloat moveRangeY = newPoint.y - lastPoint.y;
-        
-        //        NSLog(@"move x = %f, y = %f dx=%f, dy=%f", newPoint.x, newPoint.y, moveRangeX, moveRangeY);
-        //只有移动范围超过了swipeRecognizeRange才认为有效的移动，只要有其中一个手指范围不够就会触发
+        if(fabs(moveRangeX) >= 0.5 || fabs(moveRangeY) >= 0.5) { //3D Touch 屏幕里面，即使没有移动，moved方法也会进来3次
+            self.moved = true;
+            thisTimeMove = true;
+            moveFingerNum += 1;
+        } else {
+            continue;
+        }
+//                NSLog(@"move x = %f, y = %f dx=%f, dy=%f", newPoint.x, newPoint.y, moveRangeX, moveRangeY);
+        //只有移动范围超过了swipeRecognizeRange才认为有效的手势移动，只要有其中一个手指范围不够就会触发
         if ((fabs(moveRangeY) < self.swipeRecognizeRange && fabs(moveRangeX) < self.swipeRecognizeRange)) {
-            [self setRecognizerState:UIGestureRecognizerStateChanged];
-            return;
+//            [self setRecognizerState:UIGestureRecognizerStateChanged];
+            continue;
         }
         //更改上次位置记录点
         [self.lastLastPointArray replaceObjectAtIndex:index withObject:[NSValue valueWithCGPoint:lastPoint]];
@@ -180,20 +186,34 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
         if (newDirection == DIRECTION_UNKNOWN) {
             newDirection = tempDirection;
         } else if(newDirection != tempDirection){ //多根手指动的方向不一样了，可能是旋转手势或捏合手势
-            [self setRecognizerState:UIGestureRecognizerStateChanged];
-            return;
+            self.rotationOrScale = true;
+//            [self setRecognizerState:UIGestureRecognizerStateChanged];
+            continue;
         }
         self.touchIndex = index;
+    }
+    if (!thisTimeMove) { //没动就不执行changed了，这样3D屏幕和普通屏幕可以统一
+        return;
     }
     //更新移动时间，和计算速度有关
     self.lastLastTime = self.lastTime;
     self.lastTime = [[NSDate date] timeIntervalSince1970];
-    
-    if(self.lastDirection != DIRECTION_UNKNOWN && newDirection != self.lastDirection && !(self.numberOfTouches == touches.count)) {//动的手指不等于按下的手指，并且方向有了变化。考虑两只手指按下，一只手指不动，另外一只左右滑动。应该是捏合手势。
+    NSLog(@"dre %ld",newDirection);
+    if(newDirection != DIRECTION_UNKNOWN && self.lastDirection != DIRECTION_UNKNOWN && newDirection != self.lastDirection && !(self.numberOfTouches == moveFingerNum)) {//动的手指不等于按下的手指，并且方向有了变化。考虑两只手指按下，一只手指不动，另外一只左右滑动。应该是捏合手势。
         self.rotationOrScale = true;
     }
+    
+    if(!self.rotationOrScale && self.gestureEnable & (RYGestureEnableRotation | RYGestureEnablePinch)) {
+        CGFloat rotaion = [self rotation];
+        CGFloat scale = [self scale];
+        if (fabs(rotaion) > 0.2 || fabs(scale - 1) > 0.2) {
+            self.rotationOrScale = true;
+        }
+    }
+    
+    
     //如果移动的方向不一样，添加新的移动方向。并且要手指同时移动
-    if (newDirection != DIRECTION_UNKNOWN && newDirection != self.lastDirection && self.numberOfTouches == touches.count && !self.fail) {
+    if (newDirection != DIRECTION_UNKNOWN && newDirection != self.lastDirection && self.numberOfTouches == moveFingerNum && !self.fail) {
         [self.directions addObject:@(newDirection)];
         self.lastDirection = newDirection;
     }
@@ -207,7 +227,7 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
 //触点抬起的时候会被调用
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    //    NSLog(@"end");
+        NSLog(@"end");
     
     //只要有手指抬起就取消长按定时器。如果定时器没有起作用，那么就不是长按。
     [self cancelLongPressTimer];
