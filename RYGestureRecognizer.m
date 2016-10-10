@@ -1,6 +1,6 @@
 //
 //  RYUIGestureRecognizer.m
-//  
+//
 //
 //  Created by Ekulelu on 16/9/22.
 //  Copyright © 2016年 Ekulelu. All rights reserved.
@@ -88,6 +88,7 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
     self.isLongPress = false;
     self.gestureEnable = RYGestureEnableAll;
     self.shouldDoActionAtTouchBegin = false;
+    self.longPressActionOnce = true;
 }
 
 
@@ -137,8 +138,13 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
 
 //触点移动的时候会调用这个方法，传入的是移动的触点
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
-//        NSLog(@"move %d", touches.count);
-    if (self.touchRealease || self.isLongPress) { //确保没有按下的手指离开   或者  已经响应是长按手势
+    //        NSLog(@"move %d", touches.count);
+    
+    if (self.isLongPress && self.longPressActionOnce) { //识别了长按，并且设置为只响应一次
+        return;
+    }
+    
+    if (self.touchRealease) { //确保没有按下的手指离开
         return;
     }
     
@@ -167,10 +173,10 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
         } else {
             continue;
         }
-//                NSLog(@"move x = %f, y = %f dx=%f, dy=%f", newPoint.x, newPoint.y, moveRangeX, moveRangeY);
+        //                NSLog(@"move x = %f, y = %f dx=%f, dy=%f", newPoint.x, newPoint.y, moveRangeX, moveRangeY);
         //只有移动范围超过了swipeRecognizeRange才认为有效的手势移动，只要有其中一个手指范围不够就会触发
         if ((fabs(moveRangeY) < self.swipeRecognizeRange && fabs(moveRangeX) < self.swipeRecognizeRange)) {
-//            [self setRecognizerState:UIGestureRecognizerStateChanged];
+            //            [self setRecognizerState:UIGestureRecognizerStateChanged];
             continue;
         }
         //更改上次位置记录点
@@ -187,7 +193,7 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
             newDirection = tempDirection;
         } else if(newDirection != tempDirection){ //多根手指动的方向不一样了，可能是旋转手势或捏合手势
             self.rotationOrScale = true;
-//            [self setRecognizerState:UIGestureRecognizerStateChanged];
+            //            [self setRecognizerState:UIGestureRecognizerStateChanged];
             continue;
         }
         self.touchIndex = index;
@@ -195,10 +201,17 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
     if (!thisTimeMove) { //没动就不执行changed了，这样3D屏幕和普通屏幕可以统一
         return;
     }
+    
+    
+    
     //更新移动时间，和计算速度有关
     self.lastLastTime = self.lastTime;
     self.lastTime = [[NSDate date] timeIntervalSince1970];
-    NSLog(@"dre %ld",newDirection);
+    
+    if (self.isLongPress) {
+        [self setRecognizerState:UIGestureRecognizerStateChanged];
+        return;
+    }
     if(newDirection != DIRECTION_UNKNOWN && self.lastDirection != DIRECTION_UNKNOWN && newDirection != self.lastDirection && !(self.numberOfTouches == moveFingerNum)) {//动的手指不等于按下的手指，并且方向有了变化。考虑两只手指按下，一只手指不动，另外一只左右滑动。应该是捏合手势。
         self.rotationOrScale = true;
     }
@@ -227,7 +240,7 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
 //触点抬起的时候会被调用
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
-        NSLog(@"end");
+    NSLog(@"end");
     
     //只要有手指抬起就取消长按定时器。如果定时器没有起作用，那么就不是长按。
     [self cancelLongPressTimer];
@@ -238,11 +251,6 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
         //        NSLog(@"手指全松开");
         self.touchRealease = false;  //清空这个标记，因为已经全部手指释放了。
         
-        if(self.isLongPress) {//已经响应过长按事件了
-            [self setRecognizerState:UIGestureRecognizerStateFailed];
-            return;
-        }
-        
         if (self.fail) {  //手势无效，这种情况出现在：有手指抬起来了，但仍有手指按着，然后有按下了手指
             self.fail = false;
             [self setRecognizerState:UIGestureRecognizerStateFailed];
@@ -252,10 +260,25 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
         if (self.firstTouchedNum <0) {
             self.firstTouchedNum = (int)self.maxTouchedNum;
         }
-        if (self.firstTouchedNum < self.minimumNumberOfTouches || self.firstTouchedNum > self.maximumNumberOfTouches) {
+        
+        if (self.firstTouchedNum < self.minimumNumberOfTouches || self.firstTouchedNum > self.maximumNumberOfTouches) {//判断手指数目是否合法
             [self setRecognizerState:UIGestureRecognizerStateFailed];
             return;
         }
+        
+        if(self.isLongPress) {//长按事件了
+            if(self.longPressActionOnce) {//说明只响应一次，并且肯定已经响应过了。
+                [self setRecognizerState:UIGestureRecognizerStateFailed];
+                return;
+            } else { //长按响应多次
+                [self setRecognizerState:UIGestureRecognizerStateEnded];
+                return;
+            }
+        }
+        
+        
+        
+        
         
         
         
@@ -678,8 +701,12 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
     }
     
     if (belowThreshold) {
+        if (self.numberOfTouches < self.minimumNumberOfTouches || self.numberOfTouches > self.maximumNumberOfTouches) {//判断手指数目是否合法
+            return;
+        }
         self.isLongPress = true;
         NSLog(@"longPress");
+        [self recognizeGesture];
         [self setRecognizerState:UIGestureRecognizerStateChanged]; //已经是longPress响应
     }
 }
@@ -689,6 +716,10 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
     self.gesture = RYGestureNone;
     NSLog(@"%d",[self directionsToInteger]);
     
+    if (self.isLongPress) {
+        self.gesture = RYLongPressGesture;
+        return;
+    }
     
     if(self.isRotationOrScale) {
         self.gesture = RYRotaionOrScaleGesture;
@@ -766,7 +797,7 @@ typedef NS_ENUM(NSUInteger, GestureDirection) {
 
 
 - (UIGestureRecognizerState) recognizerState {
-    if (_recognizerState == UIGestureRecognizerStateChanged && self.isLongPress) {
+    if (_recognizerState == UIGestureRecognizerStateChanged && self.isLongPress && self.longPressActionOnce) {
         return UIGestureRecognizerStateEnded;
     }
     return _recognizerState;

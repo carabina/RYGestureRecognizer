@@ -49,15 +49,18 @@ typedef NS_OPTIONS (NSUInteger, RYGestureEnable) {
 
 /**滑动手势识别类，可以识别上边定义的手势。
  手势识别中，如果有手指按下后，有手指抬起来（但仍有手指按着），此时再按下手指的话，判断这个手势为无效，不再响应回调方法。直到所有手指离开，才重新开始下一次的手势判断。
- * 回调方法的说明：1、获取手势类的状态请用recognizerState，这个数值的定义和UIGestureRecognizer的state一样。在长按手势中，state的值为changed，但recognizerState为ended。其他手势二者值一样。
- *              2、长按手势只在识别后响应一次，并且如果响应后手指不全部离开，那么不会进行下一次手势判断。对应的recognizerState值为UIGestureRecognizerStateEnded。
+ * 回调方法的说明：1、获取手势类的状态请用recognizerState，这个数值的定义和UIGestureRecognizer的state一样。在长按手势只响应一次的情况下，state的值为changed，但recognizerState为ended。
+ *                 其他手势二者值一样。
+ *              2、长按手势默认只在识别后响应一次，并且如果响应后手指不全部离开，那么不会进行下一次手势判断。对应的recognizerState值为UIGestureRecognizerStateEnded。
+ *                 如果需要在响应长按后，仍可以响应滑动，那么请修改longPressActionOnce为false，此时识别到longpress仍会响应滑动，但是recognizeState为changed，只有全部手指离开后，recognizeState
+ *                 才为ended。
  *              3、拖动、旋转和捏合手势会在手指移动的时候一直响应。此时可以获得速度、位移、角度、缩放这些值。对应的recognizerState值为UIGestureRecognizerStateChanged。
  *              4、默认在手指按下的时候不会响应回调函数，如果需要的话，可以修改shouldDoActionAtTouchBegin为true。
  *
-   This is a class to recognize gestures, which can recognize gestures like tap, swipe, pan, pinch, rotation, long press. You can use the class to replace the iOS sdk. 
+ This is a class to recognize gestures, which can recognize gestures like tap, swipe, pan, pinch, rotation, long press. You can use the class to replace the iOS sdk.
  * 1. One gesture cycle begins with a touch in the screen and ends with all touches leave the screen. In one gesture recognize cycle, if there is a finger leaves the screen, but there are still fingers touches, and then another new touch occure, this gesture cycle will be considered a invaild gesture.
- * 2. In action method, if you want to get the recognizer state(UIGestureRecognizerState), you should use the property of "recognizerState" rather than "state". The property of "state" in long press gesture is changed not ended. On other gestures the "state" is the same as "recognizerState".
- * 3. In long press gesture, the action will called right after the long press gesture recognized once. and before all fingers leave the screen, the new gesture cycle will not begin. the recognizeState is UIGestureRecognizerStateEnded.
+ * 2. In action method, if you want to get the recognizer state(UIGestureRecognizerState), you should use the property of "recognizerState" rather than "state". The property of "state" in long press gesture action once is changed not ended. On other gestures the "state" is the same as "recognizerState".
+ * 3. In long press gesture, the action will called right after the long press gesture recognized once by default. and before all fingers leave the screen, the new gesture cycle will not begin. the recognizeState is UIGestureRecognizerStateEnded. If you want to still recognize the move action after the long press gesture, you should set the longPressActionOnce to NO. So the move action will still be recogized and action method will be called, but the recognizerState is changed. Also, the action method will be called at all finger leave the screen with the recognizeState to be ended.
  * 4. In rotation and pan gesture, the action method will call when the touches move. the recognizeState is UIGestureRecognizerStateChanged.
  * 5. The aciton method will not call at the begin of touch, if you wish, set the shouldDoActionAtTouchBegin with true.
  */
@@ -103,11 +106,13 @@ typedef NS_OPTIONS (NSUInteger, RYGestureEnable) {
 @property(nonatomic, assign) CFTimeInterval minimumLongPressDuration; // Default is 0.5. Time in seconds the fingers must be held down for the gesture to be recognized
 
 @property(nonatomic, assign) CGFloat allowableMovementForLongPress;           // Default is 10. Maximum movement in pixels allowed before the gesture fails. Once recognized (after minimumPressDuration) there is no limit on finger movement for the remainder of the touch tracking
+@property(nonatomic, assign) Boolean longPressActionOnce; //whether the long press action be called once right after the gesture recognized. Default is YES. If set to NO, the action will still be called as fingers move even after the long press gesture is recognized, and action will be called once when all fingers leave screen.
+
 
 - (void) addCustomGesture:(NSUInteger) customGesture; //添加自定义手势，只能用1(上)、2(下)、3(左)、4(右)的组合表示.例如上左下右手势，添加的参数为1324. You can use this method to add your custom swipe gesture. the value is combined by 1(up),2(down),3(left),4(right). For exapmle, an up-left-down-right gesture, you add the 1324 value.
 - (void) removeCustomGesture:(NSUInteger)customGesture;
 
-- (UIGestureRecognizerState) recognizerState; //手势类现在的状态，和state基本一致，只有在长按的时候，state为changed，而recognizerState为ended. The recognizer state.
+- (UIGestureRecognizerState) recognizerState; //手势类现在的状态，和state基本一致，只有在长按的时候，state为changed，而recognizerState为ended. The recognizer state. If you set the longPressActionOnce to YES, when the long press gesture recognized, the recognizerState will be ended, not changed. If you set longPressActionOnce to NO, the  recognizerState will be changed as there is any fingers on the screen, and will be ended, when all fingers leave the screen.
 
 //这些方法可以在回调方法里面调用，会得到当前手指移动的速度和位移。但是得到的是最后移动的一只手指
 - (CGPoint) velocityInView:(nullable UIView*) view;//取速度的时候留意手势是否有效 Get the velocity of finger move
