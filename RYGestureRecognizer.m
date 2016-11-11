@@ -1,14 +1,14 @@
 //
 //  RYUIGestureRecognizer.m
+//  XTools
 //
-//
-//  Created by Ekulelu on 16/9/22.
-//  Copyright © 2016年 Ekulelu. All rights reserved.
+//  Created by aahu on 16/9/22.
+//  Copyright © 2016年 Royole. All rights reserved.
 //
 
 #import "RYGestureRecognizer.h"
 
-//#define NSLog(...)
+#define NSLog(...)
 
 @interface RYGestureRecognizer() {
     UIGestureRecognizerState _recognizerState; //自定义的状态参数，用来覆盖父类的getter方法。

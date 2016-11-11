@@ -1,9 +1,9 @@
 //
 //  RYUIGestureRecognizer.h
-//  
+//  XTools
 //
-//  Created by Ekulelu on 16/9/22.
-//  Copyright © 2016年 Ekulelu. All rights reserved.
+//  Created by aahu on 16/9/22.
+//  Copyright © 2016年 Royole. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
@@ -11,7 +11,7 @@
 
 //如果是斜着划的话，两个顺序识别不准确，比如向左上角滑动，可能会识别为左上或者上左。下面的常量赋值按照一定规则，上下左右分别是1、2、3、4.
 //This is the define of gestures. The property of "gesture" is one of the value of below.
-typedef NS_ENUM(int, RYPanGesture) {
+typedef NS_ENUM(int, RYGesture) {
     RYGestureNone = 0,
     RYGestureUp = 1,
     RYGestureDown = 2,
@@ -65,7 +65,7 @@ typedef NS_OPTIONS (NSUInteger, RYGestureEnable) {
  * 5. The aciton method will not call at the begin of touch, if you wish, set the shouldDoActionAtTouchBegin with true.
  */
 @interface RYGestureRecognizer : UIGestureRecognizer<UIGestureRecognizerDelegate>
-@property(nonatomic, assign) RYPanGesture gesture;  //识别的手势 The recognized gesture
+@property(nonatomic, assign) RYGesture gesture;  //识别的手势 The recognized gesture
 
 @property(nonatomic, assign) NSUInteger maxTouchedNum; //保存曾经最大的touch数目，如果两个手指按下了，因为松手会有前后，如果手势有效，应该还是算两个手指的，两只手指双击的话，这个数字为4.因为一共有四次touch。如果要得到双击的手指数目，那么请用maxFingerNum。 The max number of touch in one gesture cycle. One gesture cycle begins with a touch in the screen and ends with all touches leave the screen. If two fingers touch the screen, and leave one by one, the maxTouchedNum is 2. On double tap situation with two fingers to complete the gesture, the maxTouchedNum is 4. If you want to get the fingers num, please use the property of maxFingerNum.
 
@@ -112,10 +112,10 @@ typedef NS_OPTIONS (NSUInteger, RYGestureEnable) {
 - (void) addCustomGesture:(NSUInteger) customGesture; //添加自定义手势，只能用1(上)、2(下)、3(左)、4(右)的组合表示.例如上左下右手势，添加的参数为1324. You can use this method to add your custom swipe gesture. the value is combined by 1(up),2(down),3(left),4(right). For exapmle, an up-left-down-right gesture, you add the 1324 value.
 - (void) removeCustomGesture:(NSUInteger)customGesture;
 
-- (UIGestureRecognizerState) recognizerState; //手势类现在的状态，和state基本一致，只有在长按的时候，state为changed，而recognizerState为ended. The recognizer state. If you set the longPressActionOnce to YES, when the long press gesture recognized, the recognizerState will be ended, not changed. If you set longPressActionOnce to NO, the  recognizerState will be changed as there is any fingers on the screen, and will be ended, when all fingers leave the screen.
+- (UIGestureRecognizerState)recognizerState; //手势类现在的状态，和state基本一致，只有在长按的时候，state为changed，而recognizerState为ended. The recognizer state. If you set the longPressActionOnce to YES, when the long press gesture recognized, the recognizerState will be ended, not changed. If you set longPressActionOnce to NO, the  recognizerState will be changed as there is any fingers on the screen, and will be ended, when all fingers leave the screen.
 
 //这些方法可以在回调方法里面调用，会得到当前手指移动的速度和位移。但是得到的是最后移动的一只手指
-- (CGPoint) velocityInView:(nullable UIView*) view;//取速度的时候留意手势是否有效 Get the velocity of finger move
+- (CGPoint)velocityInView:(nullable UIView*)view;//取速度的时候留意手势是否有效 Get the velocity of finger move
 
 - (CGPoint)translationInView:(nullable UIView *)view; //手指距离起始点的移动距离，单位为像素。起始点开始为按下的点，但可以通过setTranslation方法重置 The translation of finger
 
