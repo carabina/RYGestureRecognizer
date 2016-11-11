@@ -8,6 +8,11 @@ And in the system gesture, if you register single tap and double tap in the same
 
 You can also add your custom swipe gesture to RYGestureRecognizer, like gesture up-left-down-right. you just call the method "- (void) addCustomGesture:(NSUInteger) customGesture" with unsign integer paramter of 1324.
 
+##Install with pod
+```
+pod 'RYGestureRecognizer', '~> 0.1.0'
+```
+
 ##How to use it
 ```
 //initialize and set the action.
